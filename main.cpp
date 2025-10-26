@@ -22,8 +22,6 @@ CGEventRef myCGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef
     return event;
 }
 
-
-
 void doSleep(bool sleep){
     while (sleep == true){
       std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::minutes(5));
@@ -31,15 +29,24 @@ void doSleep(bool sleep){
   }
 
 int main(){
+  @autoreleasepool{
+    //using the sharedWorkspace instance of the NSWorkspace class, get the running applications and save the memory locations in a list
+    /*NSArray<NSRunningApplication *> *apps = [[NSWorkspace sharedWorkspace] runningApplications];
+    
+    for (NSRunningApplication *app in apps){
+      std::cout << [[app localizedName] UTF8String] << std::endl;
+    }
+      */
+      
+
+    NSRunningApplication *frontApp = [[NSWorkspace sharedWorkspace] frontmostApplication];
+    std::cout << "Active app: " << [[frontApp localizedName] UTF8String] << std::endl;
+    
+  }
 
   using namespace std::this_thread; // sleep_for, sleep_until
   using namespace std::chrono; // nanoseconds, system_clock, seconds
   bool sleeping;
-
-    //get user input regarding their current state
-  std::string isWorking = "N";
-  std::cout << "Are you working? Y/N: " << std::flush;
-  std::cin >> isWorking;
 
   //check if the mp3 file opens
   sf::Music music;
@@ -48,6 +55,10 @@ int main(){
     return -1;
   }
 
+  //get user input regarding their current state
+  std::string isWorking = "N";
+  std::cout << "Are you working? Y/N: " << std::flush;
+  std::cin >> isWorking;
 
   //doSleep()
   //sleep_until(system_clock::now() + minutes(5));
@@ -71,29 +82,42 @@ int main(){
     //enable listening of the event (key down)
     CGEventTapEnable(eventTap, true);
 
-    // Key pressed, stop listening and continue
-    CGEventTapEnable(eventTap, false);
-    CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
-    CFRelease(eventTap);
-    CFRelease(runLoopSource);
+    std::thread runLoopThread([]() {
+        CFRunLoopRun();
+    });
+
+    while (true) {
+      sleep_until(system_clock::now() + minutes(1));
+      std::cout << "Checking key press for 5 seconds" << std::endl;
+      CFRunLoopRunInMode(kCFRunLoopDefaultMode, 5, false);
+      std::cout << "Done checking" << std::endl;
+
+      if (!globalKeyPressed){
+        std::cout << "Playing siren. Press 's' and Enter to stop.\n";
+        music.play();
+
+        //std::this_thread::sleep_for(music.getDuration());
+        system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"ZenMode\"'");
+        
+        if (globalKeyPressed = true) {
+          music.stop();
+        }
+      }
+      else{
+      // Key pressed, stop listening and continue
+      CGEventTapEnable(eventTap, false);
+      CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
+      CFRelease(eventTap);
+      CFRelease(runLoopSource);
+      system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"Disable ZenMode\"'");
+      globalKeyPressed = false;
+      continue;
+      }
+    }
     //std::string warningText = "Warning. Warning. Procrastination Mode enabling in One minute.";
     //std::string command = "say -v Fred -r 200 \"" + warningText + "\"";
     //system(command.c_str());
-    std::cout << "Playing siren. Press 's' and Enter to stop.\n";
-    music.play();
-
-    //std::this_thread::sleep_for(music.getDuration());
-    system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"ZenMode\"'");
-    
-    //code for the specific stop key 
-    char stopKey;
-    std::cin >> stopKey;
-    if (stopKey == 's') {
-      music.stop();
-      system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"Disable ZenMode\"'");
       return 0;
     }
-  }
-
-
 }
+
