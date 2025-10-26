@@ -92,19 +92,20 @@ int main(){
       CFRunLoopRunInMode(kCFRunLoopDefaultMode, 5, false);
       std::cout << "Done checking" << std::endl;
 
-      if (!globalKeyPressed){
-        std::cout << "Playing siren. Press 's' and Enter to stop.\n";
+      if (globalKeyPressed == false){
+        std::cout << "Playing siren. Press any key to stop.\n";
         music.play();
-
-        //std::this_thread::sleep_for(music.getDuration());
         system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"ZenMode\"'");
-        
-        if (globalKeyPressed = true) {
-          music.stop();
+        while (globalKeyPressed == false){
+          CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, false);
         }
+        music.stop();
+        system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"Disable ZenMode\"'");
+        globalKeyPressed = false;
       }
       else{
       // Key pressed, stop listening and continue
+      music.stop();
       CGEventTapEnable(eventTap, false);
       CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
       CFRelease(eventTap);
