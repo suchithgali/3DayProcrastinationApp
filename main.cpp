@@ -12,7 +12,6 @@
 
 std::atomic<bool> globalKeyPressed(false);
 
-
 //when key down happens set key pressed to true
 CGEventRef myCGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
     if (type == kCGEventKeyDown) {
@@ -37,10 +36,6 @@ int main(){
       std::cout << [[app localizedName] UTF8String] << std::endl;
     }
       */
-      
-
-    NSRunningApplication *frontApp = [[NSWorkspace sharedWorkspace] frontmostApplication];
-    std::cout << "Active app: " << [[frontApp localizedName] UTF8String] << std::endl;
     
   }
 
@@ -91,8 +86,34 @@ int main(){
       std::cout << "Checking key press for 5 seconds" << std::endl;
       CFRunLoopRunInMode(kCFRunLoopDefaultMode, 5, false);
       std::cout << "Done checking" << std::endl;
+      NSRunningApplication *frontApp = [[NSWorkspace sharedWorkspace] frontmostApplication];
+      std::string appName = [[frontApp localizedName] UTF8String];
 
-      if (globalKeyPressed == false){
+      if (globalKeyPressed == false || appName != "Code"){
+        if (appName == "Google Chrome"){
+          char buf[512];
+          std::string url;
+
+          // Get full URL from Chrome active tab
+          FILE* pipe = popen("osascript -e 'tell application \"Google Chrome\" to get URL of active tab of front window'", "r");
+          if (!pipe) return 1;
+          while (fgets(buf, sizeof(buf), pipe)) url += buf;
+          pclose(pipe);
+
+          if (!url.empty() && url.back() == '\n') url.pop_back();
+
+          // Remove protocol (https:// or http://)
+          size_t pos = url.find("://");
+          if (pos != std::string::npos) url = url.substr(pos + 3);
+
+          // Keep only the domain up to first slash
+          pos = url.find('/');
+          if (pos != std::string::npos) url = url.substr(0, pos);
+
+          if (url == "catcourses.ucmerced.edu"){
+            continue;
+          }
+        }
         std::cout << "Playing siren. Press any key to stop.\n";
         music.play();
         system("osascript -e 'tell application \"Shortcuts\" to run shortcut \"ZenMode\"'");
